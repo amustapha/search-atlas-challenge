@@ -1,5 +1,3 @@
-from email.policy import default
-
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .models import Author, Book, Member, Loan
@@ -9,9 +7,11 @@ from .serializers import (
     LoanExtensionSerializer,
     MemberSerializer,
     LoanSerializer,
+    TopActiveMemberSerializer,
 )
 from rest_framework.decorators import action
 from django.utils import timezone
+from django.db.models import Count, Q
 from .tasks import send_loan_notification
 
 
@@ -71,9 +71,15 @@ class MemberViewSet(viewsets.ModelViewSet):
     queryset = Member.objects.select_related("user").all()
     serializer_class = MemberSerializer
 
-    # @action(detail=False, methods=['get'], url_path='top-active')
-    # def top_active(self, request):
-    #     members = Member.objects.select_related("user").annotate(active_loans=Count)
+    @action(detail=False, methods=["get"], url_path="top-active")
+    def top_active(self, request):
+        members = (
+            Member.objects.select_related("user")
+            .annotate(active_loans=Count("loans", filter=Q(loans__is_returned=False)))
+            .order_by("-active_loans")[:5]
+        )
+        serialized = TopActiveMemberSerializer(members, many=True)
+        return Response(serialized.data)
 
 
 class LoanViewSet(viewsets.ModelViewSet):
