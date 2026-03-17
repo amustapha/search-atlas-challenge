@@ -1,3 +1,5 @@
+from email.policy import default
+
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .models import Author, Book, Member, Loan
@@ -68,6 +70,10 @@ class BookViewSet(viewsets.ModelViewSet):
 class MemberViewSet(viewsets.ModelViewSet):
     queryset = Member.objects.select_related("user").all()
     serializer_class = MemberSerializer
+
+    # @action(detail=False, methods=['get'], url_path='top-active')
+    # def top_active(self, request):
+    #     members = Member.objects.select_related("user").annotate(active_loans=Count)
 
 
 class LoanViewSet(viewsets.ModelViewSet):
