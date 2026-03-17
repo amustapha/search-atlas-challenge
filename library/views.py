@@ -19,7 +19,7 @@ class AuthorViewSet(viewsets.ModelViewSet):
 
 
 class BookViewSet(viewsets.ModelViewSet):
-    queryset = Book.objects.all()
+    queryset = Book.objects.select_related("author").all()
     serializer_class = BookSerializer
 
     @action(detail=True, methods=["post"])
@@ -66,12 +66,12 @@ class BookViewSet(viewsets.ModelViewSet):
 
 
 class MemberViewSet(viewsets.ModelViewSet):
-    queryset = Member.objects.all()
+    queryset = Member.objects.select_related("user").all()
     serializer_class = MemberSerializer
 
 
 class LoanViewSet(viewsets.ModelViewSet):
-    queryset = Loan.objects.all()
+    queryset = Loan.objects.select_related("book__author", "member__user").all()
     serializer_class = LoanSerializer
 
     @action(
