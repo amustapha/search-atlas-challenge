@@ -2,44 +2,57 @@ from rest_framework import serializers
 from .models import Author, Book, Member, Loan
 from django.contrib.auth.models import User
 
+
 class AuthorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Author
-        fields = '__all__'
+        fields = "__all__"
+
 
 class BookSerializer(serializers.ModelSerializer):
     author = AuthorSerializer(read_only=True)
     author_id = serializers.PrimaryKeyRelatedField(
-        queryset=Author.objects.all(), source='author', write_only=True
+        queryset=Author.objects.all(), source="author", write_only=True
     )
 
     class Meta:
         model = Book
-        fields = ['id', 'title', 'author', 'author_id', 'isbn', 'genre', 'available_copies']
+        fields = [
+            "id",
+            "title",
+            "author",
+            "author_id",
+            "isbn",
+            "genre",
+            "available_copies",
+        ]
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ["id", "username", "email"]
+
 
 class MemberSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     user_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), source='user', write_only=True
+        queryset=User.objects.all(), source="user", write_only=True
     )
 
     class Meta:
         model = Member
-        fields = ['id', 'user', 'user_id', 'membership_date']
+        fields = ["id", "user", "user_id", "membership_date"]
+
 
 class LoanSerializer(serializers.ModelSerializer):
     book = BookSerializer(read_only=True)
     book_id = serializers.PrimaryKeyRelatedField(
-        queryset=Book.objects.all(), source='book', write_only=True
+        queryset=Book.objects.all(), source="book", write_only=True
     )
     member = MemberSerializer(read_only=True)
     member_id = serializers.PrimaryKeyRelatedField(
-        queryset=Member.objects.all(), source='member', write_only=True
+        queryset=Member.objects.all(), source="member", write_only=True
     )
 
     class Meta:
@@ -55,3 +68,21 @@ class LoanSerializer(serializers.ModelSerializer):
             "return_date",
             "is_returned",
         ]
+
+
+class LoanExtensionSerializer(LoanSerializer):
+    additional_days = serializers.IntegerField(min_value=1, write_only=True)
+
+    class Meta(LoanSerializer.Meta):
+        fields = LoanSerializer.Meta.fields + ["additional_days"]
+
+    def validate_additional_days(self, additional_days):
+        if self.instance.is_overdue:
+            raise serializers.ValidationError(
+                "Loan is already overdue, not eligible for extension!"
+            )
+
+        return additional_days
+
+    def update(self, instance, validated_date):
+        return instance.extend_due_date(validated_date["additional_days"])

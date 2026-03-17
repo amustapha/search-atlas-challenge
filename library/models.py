@@ -1,7 +1,9 @@
+from datetime import timedelta
+
 from django.db import models
 from django.contrib.auth.models import User
 
-from library.utils import default_loan_expiry_date
+from library.utils import default_loan_expiry_date, today
 
 
 class Author(models.Model):
@@ -51,3 +53,13 @@ class Loan(models.Model):
 
     def __str__(self):
         return f"{self.book.title} loaned to {self.member.user.username}"
+
+    @property
+    def is_overdue(self):
+        return self.due_date < today()
+
+    def extend_due_date(self, num_days):
+        self.due_date += timedelta(days=num_days)
+        self.save()
+
+        return self
